@@ -146,18 +146,20 @@ tr:hover {
   color: #faa307;
 }
 
-/* Add Client Form */
-.add-client-form {
-  background: #2c2c2c;
+/*Add client form */
+
+.add-client-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
   padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  margin-bottom: 20px;
 }
 
-.add-client-form h2 {
-  margin-bottom: 20px;
-  color: #faa307;
+.client-form, .transaction-form {
+  background: #2c2c2c;
+  padding: 20px;
+  border: 1px solid #444;
+  border-radius: 8px;
 }
 
 .form-group {
@@ -170,13 +172,17 @@ tr:hover {
   color: #ccc;
 }
 
-.form-group input {
+.form-group input, .form-group select {
   width: 100%;
   padding: 8px;
   border: 1px solid #444;
   border-radius: 4px;
   background-color: #1e1e1e;
   color: #fff;
+}
+
+.transaction-detail {
+  margin-bottom: 10px;
 }
 
 .submit-button {
@@ -186,13 +192,14 @@ tr:hover {
   padding: 10px 20px;
   border-radius: 5px;
   cursor: pointer;
+  transition: background-color 0.3s ease;
 }
 
 .submit-button:hover {
   background-color: #e09106;
 }
 
-/*Pagination*/
+/* Pagination */
 .pagination {
   display: flex;
   justify-content: center;
@@ -435,6 +442,7 @@ tr:hover {
   color: #000;
   border-color: #faa307;
 }
+
 /* Stats Page */
 .stats-page {
   padding: 20px;
@@ -444,4 +452,60 @@ tr:hover {
 
 .stats-page h1 {
   color: #faa307;
+}
+
+/* New Styles for Add Client and Transaction Form */
+.add-client-container {
+  display: flex;
+  gap: 20px;
+  padding: 20px;
+}
+
+.client-form, .transaction-form {
+  flex: 1;
+  padding: 20px;
+  border: 1px solid #444;
+  border-radius: 8px;
+  background-color: #2c2c2c;
+}
+
+.transaction-form h2 {
+  color: #faa307;
+  margin-bottom: 20px;
+}
+
+.transaction-detail {
+  margin-bottom: 10px;
+}
+
+.transaction-detail input {
+  margin-right: 10px;
+  padding: 8px;
+  border: 1px solid #444;
+  border-radius: 4px;
+  background-color: #1e1e1e;
+  color: #fff;
+}
+
+.transaction-detail select {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #444;
+  border-radius: 4px;
+  background-color: #1e1e1e;
+  color: #fff;
+}
+
+.transaction-detail button {
+  background-color: #faa307;
+  color: #000;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.transaction-detail button:hover {
+  background-color: #e09106;
 }

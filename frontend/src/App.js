@@ -56,16 +56,67 @@ function App() {
         fetchTransactions(client._id);
     };
 
-    const handleAddClient = (newClient) => {
-        API.post('/clients', newClient)
-            .then(response => {
-                if (response.status === 201) {
-                    alert('Client added successfully!');
-                    setShowAddClientForm(false);
-                    fetchClients();
-                }
-            })
-            .catch(error => setError('Error adding client: ' + error.message));
+    // Handle client creation (Step 1)
+    const handleAddClient = async (newClient) => {
+        try {
+            const clientResponse = await API.post('/clients', newClient);
+            if (clientResponse.status === 201) {
+                const { client } = clientResponse.data; // Extract the client object
+                alert('Client added successfully!');
+                setShowAddClientForm(false);
+                fetchClients();
+
+                // Automatically open the transaction form for the newly created client
+                setClientForTransaction(client);
+                setShowAddTransactionForm(true);
+            }
+        } catch (error) {
+            setError('Error adding client: ' + error.message);
+        }
+    };
+
+    // Handle transaction creation (Step 2)
+    const handleAddTransactionSubmit = async (transactionData) => {
+        if (!clientForTransaction?._id) {
+            alert('Client ID is missing. Transaction cannot be created.');
+            return;
+        }
+
+        try {
+            const response = await API.post('/transactionDetails/addWithDetails', {
+                clientId: clientForTransaction._id, // Use the client's ID
+                transactionData: {
+                    date_purchase: transactionData.date_purchase,
+                    payment_method: transactionData.payment_method,
+                    amount: transactionData.transaction_details.reduce(
+                        (sum, detail) => sum + detail.quantity * detail.price_per_unit,
+                        0
+                    ),
+                },
+                detailsArray: transactionData.transaction_details.map(detail => ({
+                    choiceId: detail.choiceId,
+                    purchase_type: 'product', // Match your backend validation
+                    quantity: detail.quantity,
+                    price_per_unit: detail.price_per_unit,
+                    total_price: detail.quantity * detail.price_per_unit,
+                })),
+            });
+
+            if (response.status === 201) {
+                alert('Transaction added successfully!');
+                setShowAddTransactionForm(false);
+                fetchTransactions(clientForTransaction._id); // Refresh transactions
+            }
+        } catch (error) {
+            console.error('Error adding transaction:', error.response?.data || error.message);
+            alert('Failed to add transaction. Please check the console for details.');
+        }
+    };
+
+    // Handle opening the transaction form for an existing client
+    const handleAddTransaction = (client) => {
+        setClientForTransaction(client);
+        setShowAddTransactionForm(true);
     };
 
     const handleDeleteClient = (clientId) => {
@@ -96,40 +147,6 @@ function App() {
                 }
             })
             .catch(error => setError('Error updating client: ' + error.message));
-    };
-
-    const handleAddTransaction = (client) => {
-        setClientForTransaction(client);
-        setShowAddTransactionForm(true);
-    };
-
-    const handleAddTransactionSubmit = async (transactionData) => {
-        try {
-            const response = await API.post('/transactionDetails/addWithDetails', {
-                clientId: clientForTransaction._id,
-                transactionData: {
-                    date_purchase: transactionData.date_purchase,
-                    payment_method: transactionData.payment_method,
-                    amount: transactionData.amount,
-                },
-                detailsArray: transactionData.transaction_details.map(detail => ({
-                    choiceId: detail.choiceId,
-                    purchase_type: detail.purchase_type, // Ensure this matches the Choice type
-                    quantity: detail.quantity,
-                    price_per_unit: detail.price_per_unit,
-                    total_price: detail.quantity * detail.price_per_unit,
-                })),
-            });
-    
-            if (response.status === 201) {
-                alert('Transaction added successfully!');
-                setShowAddTransactionForm(false);
-                fetchTransactions(clientForTransaction._id); //Refresh transactions
-            }
-        } catch (error) {
-            console.error('Error adding transaction:', error.response?.data || error.message);
-            alert('Failed to add transaction. Please check the console for details.');
-        }
     };
 
     const handleAddChoice = (newChoice) => {
@@ -204,7 +221,12 @@ function App() {
                                     </button>
                                 </div>
 
-                                {showAddClientForm && <AddClientForm onClientAdded={handleAddClient} />}
+                                {showAddClientForm && (
+                                    <AddClientForm
+                                        onClientAdded={handleAddClient}
+                                        choices={choices}
+                                    />
+                                )}
 
                                 <Modal isOpen={showUpdateClientForm} onClose={() => setShowUpdateClientForm(false)}>
                                     <UpdateClientForm

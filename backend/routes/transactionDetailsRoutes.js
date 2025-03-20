@@ -8,7 +8,15 @@ const Choice = require('../models/choice'); // Import the Choice model
 // Add a transaction with details
 router.post('/addWithDetails', async (req, res) => {
     const { clientId, transactionData, detailsArray } = req.body;
-
+    console.log('Transaction payload:', {
+        clientId: client._id,
+        transactionData: {
+          date_purchase: transactionData.date_purchase,
+          payment_method: transactionData.payment_method,
+          amount: detailsArray.reduce((sum, detail) => sum + detail.total_price, 0),
+        },
+        detailsArray: detailsArray,
+      });
     console.log('Received request:', { clientId, transactionData, detailsArray }); // Log the request
 
     try {
