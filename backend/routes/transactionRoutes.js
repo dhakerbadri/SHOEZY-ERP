@@ -58,11 +58,9 @@ router.get('/client/:clientId', async (req, res) => {
                         },
                     });
 
-        if (transactions.length === 0) {
-            return res.status(404).json({ message: 'No transactions found for this client' });
-        }
+    
 
-        res.status(200).json(transactions);
+        res.status(200).json(transactions || []);
     } catch (error) {
         console.error('Error fetching transactions:', error.message);
         res.status(500).json({
