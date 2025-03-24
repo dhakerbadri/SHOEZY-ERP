@@ -1,11 +1,16 @@
 import React, { useState } from 'react';
-import API from './services/api'; // Ensure API is imported
+import API from './services/api';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus } from '@fortawesome/free-solid-svg-icons';
 import './App.css';
-
-function AddClientForm({ onClientAdded, choices }) {
-  const [step, setStep] = useState(1); // Step 1: Client Info, Step 2: Transaction Details
+function AddClientForm({
+  onClientAdded,
+  choices,
+  setShowAddClientForm,
+  fetchClients,
+  setShowAddTransactionForm,
+}) {
+  const [step, setStep] = useState(1);
   const [clientData, setClientData] = useState({
     firstname: '',
     lastname: '',
@@ -18,19 +23,18 @@ function AddClientForm({ onClientAdded, choices }) {
     payment_method: '',
     transaction_details: [{ choiceId: '', quantity: 1, price_per_unit: 0 }],
   });
-  const [clientId, setClientId] = useState(null); // Store the client ID after creation
+  const [currentClientId, setCurrentClientId] = useState(null); // Add this state
 
   // Handle client info form submission
   const handleClientSubmit = async (e) => {
     e.preventDefault();
 
     try {
-      // Step 1: Add the client
       const clientResponse = await API.post('/clients', clientData);
       if (clientResponse.status === 201) {
         const { client } = clientResponse.data;
-        setClientId(client._id); // Store the client ID
-        setStep(2); // Move to the transaction form
+        setCurrentClientId(client._id); // Store the client ID
+        setStep(2);
       }
     } catch (error) {
       console.error('Error adding client:', error.response?.data || error.message);
@@ -43,33 +47,33 @@ function AddClientForm({ onClientAdded, choices }) {
     e.preventDefault();
 
     try {
-      // Step 2: Add the transaction
+      if (!currentClientId) {
+        throw new Error("No client selected for transaction");
+      }
+
       const transactionResponse = await API.post('/transactionDetails/addWithDetails', {
-        clientId: clientId, // Use the stored client ID
+        clientId: currentClientId, // Use the stored client ID
         transactionData: {
           date_purchase: transactionData.date_purchase,
           payment_method: transactionData.payment_method,
-          amount: transactionData.transaction_details.reduce(
-            (sum, detail) => sum + detail.quantity * detail.price_per_unit,
-            0
-          ),
         },
-        detailsArray: transactionData.transaction_details.map((detail) => ({
+        detailsArray: transactionData.transaction_details.map(detail => ({
           choiceId: detail.choiceId,
-          purchase_type: 'product', // Match your backend validation
-          quantity: detail.quantity,
-          price_per_unit: detail.price_per_unit,
-          total_price: detail.quantity * detail.price_per_unit,
-        })),
+          purchase_type: detail.purchase_type || 'product',
+          quantity: Number(detail.quantity),
+          price_per_unit: Number(detail.price_per_unit),
+        }))
       });
 
       if (transactionResponse.status === 201) {
-        alert('Client and transaction added successfully!');
-        onClientAdded(); // Refresh the client list
+        alert('Transaction added successfully!');
+        setShowAddClientForm(false);
+        setShowAddTransactionForm(false);
+        fetchClients();
       }
     } catch (error) {
-      console.error('Error adding transaction:', error.response?.data || error.message);
-      alert(`Error: ${error.response?.data?.message || error.message}`);
+      console.error('Transaction error:', error.response?.data || error.message);
+      alert(`Transaction failed: ${error.response?.data?.message || error.message}`);
     }
   };
 

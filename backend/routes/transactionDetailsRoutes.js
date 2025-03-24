@@ -3,94 +3,85 @@ const express = require('express');
 const router = express.Router();
 const Transaction = require('../models/transaction');
 const TransactionDetails = require('../models/TransactionDetails');
-const Choice = require('../models/choice'); // Import the Choice model
+const Choice = require('../models/choice');
 
 // Add a transaction with details
 router.post('/addWithDetails', async (req, res) => {
     const { clientId, transactionData, detailsArray } = req.body;
-    console.log('Transaction payload:', {
-        clientId: client._id,
-        transactionData: {
-          date_purchase: transactionData.date_purchase,
-          payment_method: transactionData.payment_method,
-          amount: detailsArray.reduce((sum, detail) => sum + detail.total_price, 0),
-        },
-        detailsArray: detailsArray,
-      });
-    console.log('Received request:', { clientId, transactionData, detailsArray }); // Log the request
+    
+    console.log('Received request:', { clientId, transactionData, detailsArray });
 
     try {
-        // Validate clientId
-        if (!mongoose.Types.ObjectId.isValid(clientId)) {
-            return res.status(400).json({ message: 'Invalid clientId' });
+        // Validate required fields
+        if (!clientId || !transactionData || !detailsArray) {
+            return res.status(400).json({ message: 'Missing required fields: clientId, transactionData, or detailsArray' });
         }
 
-        // Calculate the total amount from transaction details
+        // Validate clientId format
+        if (!mongoose.Types.ObjectId.isValid(clientId)) {
+            return res.status(400).json({ message: 'Invalid clientId format' });
+        }
+
+        // Calculate the total amount
         const totalAmount = detailsArray.reduce((sum, detail) => {
             return sum + (detail.quantity * detail.price_per_unit);
         }, 0);
 
-        // Create a new transaction with the calculated amount
+        // Create and save the transaction
         const transaction = new Transaction({
-            ...transactionData,
-            amount: totalAmount, // Set the calculated amount
+            date_purchase: transactionData.date_purchase,
+            payment_method: transactionData.payment_method,
+            amount: totalAmount,
             id_client: clientId,
         });
 
-        // Save the transaction
         const savedTransaction = await transaction.save();
 
-        // Add transaction details with reference to Choice
+        // Process transaction details
         const transactionDetails = await Promise.all(
             detailsArray.map(async (detail) => {
-                // Validate choiceId
+                // Validate choice exists
                 const choice = await Choice.findById(detail.choiceId);
                 if (!choice) {
-                    throw new Error(`Choice with ID ${detail.choiceId} does not exist`);
+                    throw new Error(`Choice with ID ${detail.choiceId} not found`);
                 }
 
-                // Validate purchase_type
-                if (!detail.purchase_type) {
-                    throw new Error('purchase_type is required for all transaction details');
-                }
-
-                // Ensure purchase_type matches the Choice type
+                // Validate purchase type matches choice type
                 if (choice.type.toLowerCase() !== detail.purchase_type.toLowerCase()) {
-                    throw new Error(
-                        `Mismatch between purchase_type (${detail.purchase_type}) and choice type (${choice.type})`
-                    );
+                    throw new Error(`Purchase type (${detail.purchase_type}) doesn't match choice type (${choice.type})`);
                 }
 
-                // Calculate total_price
-                const total_price = detail.quantity * detail.price_per_unit;
-
-                // Create the transaction detail
+                // Create and save transaction detail
                 const newDetail = new TransactionDetails({
-                    ...detail,
-                    total_price, // Add calculated total_price
-                    id_transaction: savedTransaction._id,
-                    choiceId: choice._id, // Reference to the Choice
+                    choiceId: choice._id,
+                    purchase_type: detail.purchase_type,
+                    quantity: detail.quantity,
+                    price_per_unit: detail.price_per_unit,
+                    total_price: detail.quantity * detail.price_per_unit,
+                    id_transaction: savedTransaction._id
                 });
 
-                // Save the transaction detail
-                const savedDetail = await newDetail.save();
-                return savedDetail._id;
+                return await newDetail.save();
             })
         );
 
-        // Link transaction details to the transaction
-        savedTransaction.transaction_details = transactionDetails;
+        // Update transaction with details references
+        savedTransaction.transaction_details = transactionDetails.map(d => d._id);
         await savedTransaction.save();
 
-        // Return success response
         res.status(201).json({
             message: 'Transaction and details added successfully',
-            savedTransaction,
+            transaction: savedTransaction,
+            details: transactionDetails
         });
+
     } catch (error) {
-        console.error('Error adding transaction with details:', error.message, error.stack);
-        res.status(500).json({ message: 'Failed to add transaction with details', error: error.message });
+        console.error('Transaction error:', error.message);
+        res.status(500).json({ 
+            message: 'Failed to process transaction',
+            error: error.message 
+        });
     }
 });
 
-module.exports = router; // Export the router
+module.exports = router;

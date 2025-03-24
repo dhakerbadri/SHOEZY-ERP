@@ -221,12 +221,16 @@ function App() {
                                     </button>
                                 </div>
 
-                                {showAddClientForm && (
-                                    <AddClientForm
-                                        onClientAdded={handleAddClient}
-                                        choices={choices}
-                                    />
-                                )}
+{showAddClientForm && (
+  <AddClientForm
+    onClientAdded={handleAddClient}
+    choices={choices}
+    setShowAddClientForm={setShowAddClientForm}
+    fetchClients={fetchClients}
+    setClientForTransaction={setClientForTransaction}
+    setShowAddTransactionForm={setShowAddTransactionForm}
+  />
+)}
 
                                 <Modal isOpen={showUpdateClientForm} onClose={() => setShowUpdateClientForm(false)}>
                                     <UpdateClientForm
