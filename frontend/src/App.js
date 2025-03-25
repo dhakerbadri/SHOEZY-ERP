@@ -26,6 +26,9 @@ function App() {
     const [error, setError] = useState(null);
     const [currentPage, setCurrentPage] = useState(1); // Pagination state
     const [clientsPerPage] = useState(8); // 4 cards per row * 2 rows
+    const [transactionToEdit, setTransactionToEdit] = useState(null);
+
+
 
     useEffect(() => {
         fetchClients();
@@ -55,6 +58,28 @@ function App() {
         setTransactions([]);
         fetchTransactions(client._id);
     };
+    //Transaction Handle 
+    const handleDeleteTransaction = async (transactionId) => {
+        if (window.confirm('Are you sure you want to delete this transaction?')) {
+            try {
+                await API.delete(`/transactions/${transactionId}`);
+                fetchTransactions(selectedClient._id);
+                alert('Transaction deleted successfully');
+            } catch (error) {
+                console.error('Delete failed:', error);
+                alert('Failed to delete transaction');
+            }
+        }
+    };
+    
+    // Update transaction handler
+    const handleUpdateTransaction = (transaction) => {
+        setTransactionToEdit(transaction);
+        setShowAddTransactionForm(true);
+    };
+    
+
+
 
     // Handle client creation (Step 1)
     const handleAddClient = async (newClient) => {
@@ -77,39 +102,49 @@ function App() {
 
     // Handle transaction creation (Step 2)
     const handleAddTransactionSubmit = async (transactionData) => {
-        if (!clientForTransaction?._id) {
-            alert('Client ID is missing. Transaction cannot be created.');
-            return;
-        }
-
         try {
-            const response = await API.post('/transactionDetails/addWithDetails', {
-                clientId: clientForTransaction._id, // Use the client's ID
-                transactionData: {
-                    date_purchase: transactionData.date_purchase,
-                    payment_method: transactionData.payment_method,
-                    amount: transactionData.transaction_details.reduce(
-                        (sum, detail) => sum + detail.quantity * detail.price_per_unit,
-                        0
-                    ),
-                },
-                detailsArray: transactionData.transaction_details.map(detail => ({
-                    choiceId: detail.choiceId,
-                    purchase_type: 'product', // Match your backend validation
-                    quantity: detail.quantity,
-                    price_per_unit: detail.price_per_unit,
-                    total_price: detail.quantity * detail.price_per_unit,
-                })),
-            });
-
-            if (response.status === 201) {
+            if (transactionToEdit) {
+                // Update existing transaction
+                await API.put(`/transactions/${transactionToEdit._id}`, {
+                    transactionData: {
+                        date_purchase: transactionData.date_purchase,
+                        payment_method: transactionData.payment_method
+                    },
+                    detailsArray: transactionData.transaction_details
+                });
+                alert('Transaction updated successfully!');
+            } else {
+                // Create new transaction (your existing code)
+                if (!clientForTransaction?._id) {
+                    alert('Client ID missing');
+                    return;
+                }
+                await API.post('/transactionDetails/addWithDetails', {
+                    clientId: clientForTransaction._id,
+                    transactionData: {
+                        date_purchase: transactionData.date_purchase,
+                        payment_method: transactionData.payment_method,
+                        amount: transactionData.transaction_details.reduce(
+                            (sum, detail) => sum + detail.quantity * detail.price_per_unit, 0
+                        ),
+                    },
+                    detailsArray: transactionData.transaction_details.map(detail => ({
+                        choiceId: detail.choiceId,
+                        purchase_type: 'product',
+                        quantity: detail.quantity,
+                        price_per_unit: detail.price_per_unit,
+                        total_price: detail.quantity * detail.price_per_unit,
+                    })),
+                });
                 alert('Transaction added successfully!');
-                setShowAddTransactionForm(false);
-                fetchTransactions(clientForTransaction._id); // Refresh transactions
             }
+            
+            setShowAddTransactionForm(false);
+            setTransactionToEdit(null);
+            fetchTransactions(selectedClient._id);
         } catch (error) {
-            console.error('Error adding transaction:', error.response?.data || error.message);
-            alert('Failed to add transaction. Please check the console for details.');
+            console.error('Error:', error);
+            alert(`Operation failed: ${error.response?.data?.message || error.message}`);
         }
     };
 
@@ -351,6 +386,22 @@ function App() {
                                                                         <p>No details</p>
                                                                     )}
                                                                 </td>
+                                                                <td className="transaction-actions">
+                            <button 
+                                onClick={() => handleUpdateTransaction(transaction)}
+                                className="action-button update-button"
+                                title="Edit"
+                            >
+                                <FontAwesomeIcon icon={faPen} />
+                            </button>
+                            <button 
+                                onClick={() => handleDeleteTransaction(transaction._id)}
+                                className="action-button delete-button"
+                                title="Delete"
+                            >
+                                <FontAwesomeIcon icon={faTrash} />
+                            </button>
+                        </td>
                                                             </tr>
                                                         ))}
                                                     </tbody>

@@ -1,10 +1,8 @@
 const mongoose = require('mongoose');
 const express = require('express');
 const router = express.Router();
-const Transaction = require('../models/transaction');
-const TransactionDetails = require('../models/TransactionDetails');
-const Choice = require('../models/choice');
 
+const { Transaction, TransactionDetails, Choice } = require('../models');
 // Add a transaction with details
 router.post('/addWithDetails', async (req, res) => {
     const { clientId, transactionData, detailsArray } = req.body;

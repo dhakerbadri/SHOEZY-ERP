@@ -509,3 +509,80 @@ tr:hover {
 .transaction-detail button:hover {
   background-color: #e09106;
 }
+/* Transaction Actions */
+.transaction-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.transaction-actions button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 4px;
+  transition: background-color 0.3s ease;
+}
+
+.transaction-actions button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Add to your existing button styles */
+.update-button {
+  color: #ffc107;
+}
+
+.delete-button {
+  color: #dc3545;
+}
+/* Transaction Form Styles */
+.add-transaction-form {
+  background: #2c2c2c;
+  padding: 20px;
+  border-radius: 8px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.transaction-detail {
+  background: #3c3c3c;
+  padding: 15px;
+  border-radius: 5px;
+  margin-bottom: 15px;
+}
+
+.detail-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 10px;
+  margin-top: 10px;
+  align-items: center;
+}
+
+.detail-inputs label {
+  display: block;
+  margin-bottom: 5px;
+  color: #ccc;
+}
+
+.remove-detail-button {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  height: fit-content;
+}
+
+.add-detail-button {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 10px;
+}
