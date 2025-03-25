@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Routes, Route } from 'react-router-dom'; // Import Routes and Route
+import { Routes, Route } from 'react-router-dom';
 import API from './services/api';
 import AddClientForm from './AddClientForm';
 import UpdateClientForm from './UpdateClientForm';
@@ -7,7 +7,7 @@ import AddTransactionForm from './AddTransactionForm';
 import ManageChoicesForm from './ManageChoicesForm';
 import Modal from './Modal';
 import Sidebar from './Sidebar';
-import Stats from './Stats'; // Import the Stats page
+import Stats from './Stats';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye, faPen, faTrash, faPlus, faCog } from '@fortawesome/free-solid-svg-icons';
 import './App.css';
@@ -24,11 +24,10 @@ function App() {
     const [clientForTransaction, setClientForTransaction] = useState(null);
     const [choices, setChoices] = useState([]);
     const [error, setError] = useState(null);
-    const [currentPage, setCurrentPage] = useState(1); // Pagination state
-    const [clientsPerPage] = useState(8); // 4 cards per row * 2 rows
+    const [currentPage, setCurrentPage] = useState(1);
+    const [clientsPerPage] = useState(8);
     const [transactionToEdit, setTransactionToEdit] = useState(null);
-
-
+    const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
         fetchClients();
@@ -47,10 +46,22 @@ function App() {
             .catch(error => setError('Error fetching choices: ' + error.message));
     };
 
-    const fetchTransactions = (clientId) => {
-        API.get(`/transactions/client/${clientId}`)
-            .then(response => setTransactions(response.data))
-            .catch(error => setError('Error fetching transactions: ' + error.message));
+    const fetchTransactions = async (clientId) => {
+        setIsLoading(true);
+        try {
+            const response = await API.get(`/transactions/client/${clientId}`);
+            setTransactions(response.data);
+        } catch (error) {
+            setError('Error fetching transactions: ' + error.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const refreshTransactions = async () => {
+        if (selectedClient?._id) {
+            await fetchTransactions(selectedClient._id);
+        }
     };
 
     const handleClientClick = (client) => {
@@ -58,12 +69,12 @@ function App() {
         setTransactions([]);
         fetchTransactions(client._id);
     };
-    //Transaction Handle 
+
     const handleDeleteTransaction = async (transactionId) => {
         if (window.confirm('Are you sure you want to delete this transaction?')) {
             try {
                 await API.delete(`/transactions/${transactionId}`);
-                fetchTransactions(selectedClient._id);
+                await refreshTransactions();
                 alert('Transaction deleted successfully');
             } catch (error) {
                 console.error('Delete failed:', error);
@@ -71,27 +82,28 @@ function App() {
             }
         }
     };
-    
-    // Update transaction handler
-    const handleUpdateTransaction = (transaction) => {
-        setTransactionToEdit(transaction);
-        setShowAddTransactionForm(true);
+
+    const handleUpdateTransaction = async (transaction) => {
+        try {
+            setIsLoading(true);
+            const response = await API.get(`/transactions/${transaction._id}`);
+            setTransactionToEdit(response.data);
+            setShowAddTransactionForm(true);
+        } catch (error) {
+            console.error('Error fetching transaction:', error);
+        } finally {
+            setIsLoading(false);
+        }
     };
-    
 
-
-
-    // Handle client creation (Step 1)
     const handleAddClient = async (newClient) => {
         try {
             const clientResponse = await API.post('/clients', newClient);
             if (clientResponse.status === 201) {
-                const { client } = clientResponse.data; // Extract the client object
+                const { client } = clientResponse.data;
                 alert('Client added successfully!');
                 setShowAddClientForm(false);
                 fetchClients();
-
-                // Automatically open the transaction form for the newly created client
                 setClientForTransaction(client);
                 setShowAddTransactionForm(true);
             }
@@ -100,11 +112,9 @@ function App() {
         }
     };
 
-    // Handle transaction creation (Step 2)
     const handleAddTransactionSubmit = async (transactionData) => {
         try {
             if (transactionToEdit) {
-                // Update existing transaction
                 await API.put(`/transactions/${transactionToEdit._id}`, {
                     transactionData: {
                         date_purchase: transactionData.date_purchase,
@@ -114,7 +124,6 @@ function App() {
                 });
                 alert('Transaction updated successfully!');
             } else {
-                // Create new transaction (your existing code)
                 if (!clientForTransaction?._id) {
                     alert('Client ID missing');
                     return;
@@ -141,14 +150,13 @@ function App() {
             
             setShowAddTransactionForm(false);
             setTransactionToEdit(null);
-            fetchTransactions(selectedClient._id);
+            await refreshTransactions();
         } catch (error) {
             console.error('Error:', error);
             alert(`Operation failed: ${error.response?.data?.message || error.message}`);
         }
     };
 
-    // Handle opening the transaction form for an existing client
     const handleAddTransaction = (client) => {
         setClientForTransaction(client);
         setShowAddTransactionForm(true);
@@ -256,16 +264,16 @@ function App() {
                                     </button>
                                 </div>
 
-{showAddClientForm && (
-  <AddClientForm
-    onClientAdded={handleAddClient}
-    choices={choices}
-    setShowAddClientForm={setShowAddClientForm}
-    fetchClients={fetchClients}
-    setClientForTransaction={setClientForTransaction}
-    setShowAddTransactionForm={setShowAddTransactionForm}
-  />
-)}
+                                {showAddClientForm && (
+                                    <AddClientForm
+                                        onClientAdded={handleAddClient}
+                                        choices={choices}
+                                        setShowAddClientForm={setShowAddClientForm}
+                                        fetchClients={fetchClients}
+                                        setClientForTransaction={setClientForTransaction}
+                                        setShowAddTransactionForm={setShowAddTransactionForm}
+                                    />
+                                )}
 
                                 <Modal isOpen={showUpdateClientForm} onClose={() => setShowUpdateClientForm(false)}>
                                     <UpdateClientForm
@@ -278,6 +286,7 @@ function App() {
                                     <AddTransactionForm
                                         onTransactionAdded={handleAddTransactionSubmit}
                                         choices={choices}
+                                        initialTransaction={transactionToEdit}
                                     />
                                 </Modal>
 
@@ -352,17 +361,20 @@ function App() {
                                         <h2 className="section-title">
                                             Transactions for {selectedClient.firstname} {selectedClient.lastname}
                                         </h2>
-                                        {transactions.length === 0 ? (
+                                        {isLoading ? (
+                                            <p>Loading transactions...</p>
+                                        ) : transactions.length === 0 ? (
                                             <p className="no-transactions-message">No transactions found for this client.</p>
                                         ) : (
                                             <div className="transactions-table">
                                                 <table>
                                                     <thead>
                                                         <tr>
-                                                            <th>Date Purchase</th>
+                                                            <th>Date</th>
                                                             <th>Payment Method</th>
                                                             <th>Amount</th>
-                                                            <th>Transaction Details</th>
+                                                            <th>Details</th>
+                                                            <th>Actions</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
@@ -372,13 +384,13 @@ function App() {
                                                                 <td>{transaction.payment_method}</td>
                                                                 <td>${transaction.amount}</td>
                                                                 <td>
-                                                                    {transaction.transaction_details && transaction.transaction_details.length > 0 ? (
+                                                                    {transaction.transaction_details?.length > 0 ? (
                                                                         <ul className="details-list">
                                                                             {transaction.transaction_details.map(detail => (
                                                                                 <li key={detail._id}>
-                                                                                    <p><strong>Item : </strong> {detail.choiceId.name}</p>
-                                                                                    <p><strong>Quantity : </strong> {detail.quantity}</p>
-                                                                                    <p><strong>Price per Unit : </strong> ${detail.price_per_unit}</p>
+                                                                                    <p><strong>Item:</strong> {detail.choiceId?.name || 'Unknown'}</p>
+                                                                                    <p><strong>Qty:</strong> {detail.quantity}</p>
+                                                                                    <p><strong>Price:</strong> ${detail.price_per_unit}</p>
                                                                                 </li>
                                                                             ))}
                                                                         </ul>
@@ -387,21 +399,21 @@ function App() {
                                                                     )}
                                                                 </td>
                                                                 <td className="transaction-actions">
-                            <button 
-                                onClick={() => handleUpdateTransaction(transaction)}
-                                className="action-button update-button"
-                                title="Edit"
-                            >
-                                <FontAwesomeIcon icon={faPen} />
-                            </button>
-                            <button 
-                                onClick={() => handleDeleteTransaction(transaction._id)}
-                                className="action-button delete-button"
-                                title="Delete"
-                            >
-                                <FontAwesomeIcon icon={faTrash} />
-                            </button>
-                        </td>
+                                                                    <button 
+                                                                        onClick={() => handleUpdateTransaction(transaction)}
+                                                                        className="action-button update-button"
+                                                                        title="Edit"
+                                                                    >
+                                                                        <FontAwesomeIcon icon={faPen} />
+                                                                    </button>
+                                                                    <button 
+                                                                        onClick={() => handleDeleteTransaction(transaction._id)}
+                                                                        className="action-button delete-button"
+                                                                        title="Delete"
+                                                                    >
+                                                                        <FontAwesomeIcon icon={faTrash} />
+                                                                    </button>
+                                                                </td>
                                                             </tr>
                                                         ))}
                                                     </tbody>
@@ -413,7 +425,7 @@ function App() {
                             </>
                         }
                     />
-                    <Route path="/stats" element={<Stats />} /> {/* Stats page route */}
+                    <Route path="/stats" element={<Stats />} />
                 </Routes>
             </div>
         </div>

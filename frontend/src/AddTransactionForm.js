@@ -12,24 +12,25 @@ function AddTransactionForm({
   });
 
   // Step 5: Add this useEffect to handle pre-filling for edits
-  useEffect(() => {
-    if (initialTransaction) {
-      // Convert the transaction details to match our form structure
+// AddTransactionForm.js
+useEffect(() => {
+  if (initialTransaction) {
+      // Ensure proper population of initial data
       const formattedDetails = initialTransaction.transaction_details.map(detail => ({
-        _id: detail._id, // Keep the original ID for updates
-        choiceId: detail.choiceId._id || detail.choiceId, // Handle both populated and unpopulated
-        quantity: detail.quantity,
-        price_per_unit: detail.price_per_unit,
-        purchase_type: detail.purchase_type
+          _id: detail._id,
+          choiceId: detail.choiceId?._id || detail.choiceId,
+          quantity: detail.quantity,
+          price_per_unit: detail.price_per_unit,
+          purchase_type: detail.purchase_type || 'product'
       }));
 
       setFormData({
-        date_purchase: initialTransaction.date_purchase.split('T')[0], // Format date for input
-        payment_method: initialTransaction.payment_method,
-        transaction_details: formattedDetails
+          date_purchase: initialTransaction.date_purchase?.split('T')[0] || '',
+          payment_method: initialTransaction.payment_method || '',
+          transaction_details: formattedDetails
       });
-    }
-  }, [initialTransaction]);
+  }
+}, [initialTransaction]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;

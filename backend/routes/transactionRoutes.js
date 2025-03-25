@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { Transaction, TransactionDetails, Client } = require('../models');
+const mongoose = require('mongoose');
 
 // Add a new transaction
 router.post('/add', async (req, res) => {
@@ -37,35 +38,22 @@ router.post('/add', async (req, res) => {
 });
 
 // Fetch all transactions for a client
-const mongoose = require('mongoose');
-
+// GET transactions for client
 router.get('/client/:clientId', async (req, res) => {
-    const { clientId } = req.params;
-
-    // Validate clientId
-    if (!mongoose.Types.ObjectId.isValid(clientId)) {
-        return res.status(400).json({ message: 'Invalid clientId' });
-    }
-
     try {
-        const transactions = await Transaction.find({ id_client: clientId })
+        const transactions = await Transaction.find({ id_client: req.params.clientId })
             .populate({
-                        path :'transaction_details',
-                        populate : {
-                        path:'choiceId',
-                        select: 'name',
-                        },
-                    });
+                path: 'transaction_details',
+                populate: [{
+                    path: 'choiceId',
+                    select: 'name type'
+                }]
+            });
 
-    
-
-        res.status(200).json(transactions || []);
+        res.status(200).json(transactions);
     } catch (error) {
-        console.error('Error fetching transactions:', error.message);
-        res.status(500).json({
-            message: 'Failed to fetch transactions',
-            error: error.message,
-        });
+        console.error('Error:', error);
+        res.status(500).json({ message: error.message });
     }
 });
 
@@ -173,6 +161,15 @@ router.put('/:transactionId', async (req, res) => {
         await TransactionDetails.deleteMany({
             id_transaction: req.params.transactionId,
             _id: { $nin: updatedDetails.map(d => d._id) }
+        });
+
+        const populatedTransaction = await Transaction.findById(updatedTransaction._id)
+        .populate({
+            path: 'transaction_details',
+            populate: {
+                path: 'choiceId',
+                select: 'name type'
+            }
         });
 
         res.status(200).json({
