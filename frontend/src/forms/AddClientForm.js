@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import API from './services/api';
+import API from '../api/api';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus } from '@fortawesome/free-solid-svg-icons';
-import './App.css';
+import '../utils/App.css';
 function AddClientForm({
   onClientAdded,
   choices,

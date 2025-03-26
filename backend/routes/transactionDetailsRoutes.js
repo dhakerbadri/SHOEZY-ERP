@@ -45,9 +45,9 @@ router.post('/addWithDetails', async (req, res) => {
                 }
 
                 // Validate purchase type matches choice type
-                if (choice.type.toLowerCase() !== detail.purchase_type.toLowerCase()) {
-                    throw new Error(`Purchase type (${detail.purchase_type}) doesn't match choice type (${choice.type})`);
-                }
+                // if (choice.type.toLowerCase() !== detail.purchase_type.toLowerCase()) {
+                //     throw new Error(`Purchase type (${detail.purchase_type}) doesn't match choice type (${choice.type})`);
+                // }
 
                 // Create and save transaction detail
                 const newDetail = new TransactionDetails({
